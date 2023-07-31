@@ -1,0 +1,107 @@
+async function GetProduct(Id){const PageCurrency=localStorage.getItem('curr');let Data={id:Id}
+const ApiResult=fetch('https://www.tytaxinvincible.com/api/GetProduct.php',{method:'POST',headers:{'Content-type':'application/json'},body:JSON.stringify(Data)}).then((response)=>response.json()).then((data)=>{if(PageCurrency=='EUR'){document.getElementById('ProductData').innerHTML=data.Name+'<br>'+' Cena: '+data.PriceEUR+' €';}else{document.getElementById('ProductData').innerHTML=data.Name+'<br>'+' Cena: '+data.PriceUSD+' $';}
+if(data.Stock>0){let Button=document.getElementById('ProductAddToCartButton');Button.innerHTML='Dodaj do koszyka';Button.addEventListener('click',function(){AddToCart(Id,1);})}else{document.getElementById('ProductAddToCartButton').innerHTML='Produkt niedostępny';}});};async function GetProductMulti(Where,Id){const PageCurrency=localStorage.getItem('curr');let Data={id:Id}
+const ApiResult=fetch('https://www.tytaxinvincible.com/api/GetProduct.php',{method:'POST',headers:{'Content-type':'application/json'},body:JSON.stringify(Data)}).then((response)=>response.json()).then((data)=>{if(PageCurrency=='EUR'){document.getElementById('ProductData'+Where).innerHTML=data.Name+'<br>'+' Cena: '+data.PriceEUR+' €';}else{document.getElementById('ProductData'+Where).innerHTML=data.Name+'<br>'+' Cena: '+data.PriceUSD+' $';}
+if(data.Stock>0){let Button=document.getElementById('ProductAddToCartButton'+Where);Button.innerHTML='Dodaj do koszyka';Button.addEventListener('click',function(){AddToCart(Id,1);})}else{document.getElementById('ProductAddToCartButton'+Where).innerHTML='Produkt niedostępny';}});};async function AddToCart(Id,Quantity){let Data={id:Id,qu:Quantity}
+const ApiResult=fetch('https://www.tytaxinvincible.com/api/PutToCart.php',{method:'POST',headers:{'Content-type':'application/json'},body:JSON.stringify(Data)}).then((response)=>response.json()).then((data)=>{console.log(data);window.location.href='https://www.tytaxinvincible.com/pl/go-to-cart/';});}
+async function CheckCart(){const ApiResult=fetch('https://www.tytaxinvincible.com/api/CheckCart.php',{method:'GET',headers:{'Content-type':'application/json'}}).then((response)=>response.json()).then((data)=>{if(data.Output!='Error, Cart not exist!'){document.getElementById('CartScore').innerHTML=data.Output;}});}
+async function PrintCart(){const UsingCurrency=localStorage.getItem('curr');const ApiResult=fetch('https://www.tytaxinvincible.com/api/GenerateCart.php',{method:'GET',cache:'no-cache',headers:{'Content-type':'application/json'}}).then((response)=>response.json()).then((data)=>{document.getElementById('Cart').innerHTML='';if(data.length>0){for(var i=0;i<data.length;i++){let CheckoutAdress;let PriceGen;if(UsingCurrency=='EUR'){PriceGen=data[i][2]+' EUR';CheckoutAdress='https://www.tytaxinvincible.com/pl/checkout/eur/';}
+if(UsingCurrency=='USD'){PriceGen=data[i][1]+' USD';CheckoutAdress='https://www.tytaxinvincible.com/pl/checkout/usd/';}
+let Template=`
+          <div class="scart_item">
+            <div class="image">
+              <img src="${data[i][6]}" alt="">
+            </div>
+
+            <div class="scart_title">
+              <div class="text">${data[i][0]} </div>
+              <div class="text">${PriceGen} </div>
+            </div>
+
+            <div class="howmany">
+              <input id="Select${i}" onchange="ChangeCartValues(${i}, 'Select${i}', '${data[i][3]}')" type="number" name="" value="${data[i][5]}" min="1" max="${data[i][3]}">
+            </div>
+
+            <div onclick="DeleteFromCart(${i})" class="delete">
+              Skasuj
+            </div>
+          </div>
+          `;document.getElementById('Cart').innerHTML+=Template;document.getElementById('BuyButton').addEventListener('click',function(){window.location.href=(CheckoutAdress);})}}else{let Template=`
+        <div class="scart_empty">
+          Wygląda na to, że koszyk jest pusty :(
+        </div>
+        `;document.getElementById('Cart').innerHTML+=Template;document.getElementById('BuyButton').innerHTML='Wróć do sklepu';document.getElementById('BuyButton').addEventListener('click',function(){window.location.href=("https://www.tytaxinvincible.com/pl/");})}});CheckCart();}
+async function DeleteFromCart(Id){let Data={id:Id,}
+const ApiResult=fetch('https://www.tytaxinvincible.com/api/DeleteFromCart.php',{method:'POST',headers:{'Content-type':'application/json'},body:JSON.stringify(Data)}).then((response)=>response.json()).then((data)=>{PrintCart();});CheckCart();}
+async function ChangeCartValues(Where,Value,Max){let Product=document.getElementById(Value);let HowManyProductWeHave=0;if(parseInt(Product.value)>parseInt(Max)){Product.value=Max;HowManyProductWeHave=parseInt(Max);}else if(parseInt(Product.value)<1){Product.value=1;HowManyProductWeHave=1;}else{HowManyProductWeHave=Product.value;}
+let Data={id:Where,value:HowManyProductWeHave}
+const ApiResult=fetch('https://www.tytaxinvincible.com/api/ChangeCartValue.php',{method:'POST',headers:{'Content-type':'application/json'},body:JSON.stringify(Data)}).then((response)=>response.json()).then((data)=>{CheckCart();});}
+async function PrintCheckout(){const ApiResult=fetch('https://www.tytaxinvincible.com/api/GenerateCart.php',{method:'GET',cache:'no-cache',headers:{'Content-type':'application/json'}}).then((response)=>response.json()).then((data)=>{document.getElementById('Cart').innerHTML='';console.log(data);if(data.length>0){let FullPrice=0;for(var i=0;i<data.length;i++){let Template=`
+          <div class="scart_item">
+            <div class="image">
+              <img src="https://content.tytax.com/www/img/24.webp" alt="">
+            </div>
+
+            <div class="scart_title">
+              <div class="text">${data[i][0]} <br> ${data[i][2]} EUR</div>
+            </div>
+
+            <div class="delete">
+              Ilość:
+              ${data[i][5]}
+            </div>
+          </div>
+          `;document.getElementById('Cart').innerHTML+=Template;FullPrice+=parseFloat(data[i][2]);}
+let Price=`
+        <div class="title">
+          Kwota do zapłaty
+        </div>
+
+        <div class="text">
+          Cena produktów: ${FullPrice} Euro <br>
+          Cena wysyłki : darmowa! <br>
+          Kwotra podatku: wliczona w cene produktów <br>
+          <br>
+          Razem do zapłaty:
+        </div>
+        `;document.getElementById('Cart').innerHTML+=Price;document.getElementById('BuyButton').addEventListener('click',function(){window.location.href=("https://www.tytaxinvincible.com/pl/checkout/");})}else{let Template=`
+        <div class="scart_empty">
+          Wygląda na to, że koszyk jest pusty :(
+        </div>
+        `;document.getElementById('Cart').innerHTML+=Template;document.getElementById('BuyButton').innerHTML='Wróć do sklepu';document.getElementById('BuyButton').addEventListener('click',function(){window.location.href=("https://www.tytaxinvincible.com/pl/");})}});CheckCart();}
+async function GenerateCartForPaypal(){var PaypalCart=[];const ApiResult=fetch('https://www.tytaxinvincible.com/api/GenerateCartForPaypal.php',{method:'GET',cache:'no-cache',headers:{'Content-type':'application/json'}}).then((response)=>response.json()).then((data)=>{if(data.length>0){for(var i=0;i<data.length;i++){let ObjectConstructor={};ObjectConstructor['name']=data[i][1];ObjectConstructor['description']=data[i][2];ObjectConstructor['quantity']=data[i][8];ObjectConstructor['price']=data[i][4];ObjectConstructor['sku']=data[i][0];ObjectConstructor['currency']='EUR';PaypalCart.push(ObjectConstructor);ObjectConstructor={};}}});}
+function CVid(VideoTag){document.getElementById('MachineIframe').src='https://www.youtube.com/embed/'+VideoTag;}
+function HideMobileMenu(){document.getElementById('mobileTopMenu').style.display='none';}
+function ShowMobileMenu(){document.getElementById('mobileTopMenu').style.display='block';}
+function ScrollAdd(){document.getElementById('ScrollVideos').scrollBy(250,0);}
+function ScrollMinus(){document.getElementById('ScrollVideos').scrollBy(-250,0);}
+function ChangeCurr(){let NewCurrency=document.getElementById('CurrencyEdit').value;localStorage.setItem('curr',NewCurrency);location.reload();}
+function ChangeLang(){let NewLang=document.getElementById('LangEdit').value;localStorage.setItem('lang',NewLang);let NewAdress='https://www.tytaxinvincible.com/'+NewLang;window.location.href=NewAdress;}
+function MChangeCurr(){let NewCurrency=document.getElementById('CurrencyEditMobile').value;localStorage.setItem('curr',NewCurrency);location.reload();}
+function MChangeLang(){let NewLang=document.getElementById('LangEditMobile').value;localStorage.setItem('lang',NewLang);let NewAdress='https://www.tytaxinvincible.com/'+NewLang;window.location.href=NewAdress;}
+function SetLang(){const ActualCurrency=localStorage.getItem('curr');if(ActualCurrency==null){localStorage.setItem('curr','USD');localStorage.setItem('lang','pl');document.getElementById('CurrencyEdit').value='USD';document.getElementById('CurrencyEditMobile').value='USD';}
+else
+{document.getElementById('CurrencyEdit').value=ActualCurrency;document.getElementById('CurrencyEditMobile').value=ActualCurrency;}}
+function ScrollTop(){document.body.scrollTop=0;document.documentElement.scrollTop=0;}
+function Gen(Lang){let Obj=document.getElementById('pass').value;if(Obj==Hash){document.body.style.cursor='wait';Send(Lang);}else{Reload();document.getElementById('pass').style='border: 1px solid red';console.log('Error');}}
+function Reload(){let result='';document.getElementById('pass').value='';const characters='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';const charactersLength=characters.length;let counter=0;while(counter<4){result+=characters.charAt(Math.floor(Math.random()*charactersLength));counter+=1;}
+Hash=result;document.getElementById('Capcha').src='https://www.tytaxinvincible.com/api/capchaimg.php?hash='+Hash;}
+function Checker(){const Objects=['mail_firstname','mail_lastname','mail_subtitle','mail_text'];let BooleanArray=[];for(let i=0;i<4;i++){document.getElementById(Objects[i]).style='border: 1px solid #d6d6d6';if(document.getElementById(Objects[i]).value==''){document.getElementById(Objects[i]).style='border: 1px solid red';BooleanArray.push(false);}else{BooleanArray.push(true);}}
+if(BooleanArray[0]==true&&BooleanArray[1]==true&&BooleanArray[2]==true&&BooleanArray[3]==true){return true;}else{return false;}}
+function Send(LangType){if(Checker()==true){const TemplatePL=`
+      <div class="button">
+          <div class="firsttext">
+              Dziękujemy za kontakt! <br>
+              Odezwiemy się najszybciej jak to możliwe!
+          </div>
+      </div>
+      `;const TemplateEN=`
+      <div class="button">
+          <div class="firsttext">
+              Thanks for contacting us! <br>
+              We will reply as soon as possible!
+          </div>
+      </div>
+      `;let Username=document.getElementById('mail_firstname').value;let Surename=document.getElementById('mail_lastname').value;let Email=document.getElementById('mail_subtitle').value;let Text=document.getElementById('mail_text').value;let Data={name:Username,surename:Surename,email:Email,text:Text}
+const ApiResult=fetch('https://www.tytaxinvincible.com/api/sendContactMail.php',{method:'POST',headers:{'Content-type':'application/json'},body:JSON.stringify(Data)}).then((response)=>response.json()).then((data)=>{if(data.Output=='Mail sended!'){if(LangType=='pl'){document.getElementById('contact_form_container').innerHTML=TemplatePL;}else{document.getElementById('contact_form_container').innerHTML=TemplateEN;}
+document.body.style.cursor='default';}});}else{document.body.style.cursor='default';console.log('err');}}
